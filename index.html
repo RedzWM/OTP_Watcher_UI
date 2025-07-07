@@ -1,48 +1,50 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="vi">
 <head>
-  <meta charset="utf-8">
-  <title>OTP Watcher</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 40px; }
-    input, button { padding: 6px 10px; font-size: 14px; margin-top: 5px; }
-    .status { margin-top: 20px; white-space: pre-line; background: #f8f8f8; padding: 10px; border-left: 4px solid #ccc; }
-  </style>
+  <meta charset="UTF-8" />
+  <title>Theo dõi OTP</title>
 </head>
 <body>
-  <h2>Kích hoạt theo dõi OTP</h2>
+  <h2>Theo dõi OTP Gmail / Outlook</h2>
   <form id="otpForm">
-    <label>Email:</label><br>
-    <input type="email" name="email" required><br><br>
-
-    <label>Thời gian theo dõi (phút):</label><br>
-    <input type="number" name="duration" value="10" min="1" max="60" required><br><br>
-
-    <button type="submit">Kích hoạt</button>
+    <input type="email" name="email" placeholder="Nhập email" required /><br><br>
+    <input type="number" name="duration" placeholder="Thời gian (phút)" value="10" required /><br><br>
+    <button type="submit">Bắt đầu</button>
   </form>
-
-  <div class="status" id="result"></div>
+  <pre id="status"></pre>
 
   <script>
-    document.getElementById("otpForm").onsubmit = async function (e) {
-      e.preventDefault();
-      const form = new FormData(e.target);
-      const params = new URLSearchParams(form);
+    const form = document.getElementById("otpForm");
+    const status = document.getElementById("status");
 
-      document.getElementById("result").textContent = "⏳ Đang gửi yêu cầu...";
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const email = formData.get("email");
+      const duration = formData.get("duration");
+
+      status.textContent = "⏳ Đang xử lý...";
 
       try {
-        const res = await fetch("https://your-railway-domain.up.railway.app/api/start", {
+        const res = await fetch("https://your-railway-app.up.railway.app/api/start", {
           method: "POST",
-          body: params
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ email, duration })
         });
 
         const text = await res.text();
-        document.getElementById("result").innerHTML = text;
+        status.textContent = text;
+
+        // Nếu Gmail, sẽ bị redirect → hiển thị dạng text
+        if (res.redirected) {
+          window.location.href = res.url;
+        }
       } catch (err) {
-        document.getElementById("result").textContent = "❌ Lỗi khi gửi yêu cầu: " + err.message;
+        status.textContent = "❌ Lỗi gửi yêu cầu: " + err.message;
       }
-    }
+    });
   </script>
 </body>
 </html>

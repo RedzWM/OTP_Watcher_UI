@@ -1,50 +1,61 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Theo dõi OTP</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OTP Watcher</title>
+  <style>
+    body { font-family: Arial; padding: 2rem; background: #f4f4f4; }
+    #status { margin-top: 1rem; font-weight: bold; }
+    .hidden { display: none; }
+  </style>
 </head>
 <body>
-  <h2>Theo dõi OTP Gmail / Outlook</h2>
+  <h2>Theo dõi OTP</h2>
   <form id="otpForm">
-    <input type="email" name="email" placeholder="Nhập email" required /><br><br>
-    <input type="number" name="duration" placeholder="Thời gian (phút)" value="10" required /><br><br>
+    <label>Email:</label>
+    <input type="email" id="email" required><br><br>
+    <label>Thời gian theo dõi (phút):</label>
+    <input type="number" id="duration" min="1" max="60" value="10"><br><br>
     <button type="submit">Bắt đầu</button>
   </form>
-  <pre id="status"></pre>
+  <div id="status"></div>
 
   <script>
-    const form = document.getElementById("otpForm");
-    const status = document.getElementById("status");
+    const API_BASE = "https://otp.redzwm.tech"; // Railway backend domain
 
-    form.addEventListener("submit", async (e) => {
+    document.getElementById("otpForm").addEventListener("submit", async function(e) {
       e.preventDefault();
-      const formData = new FormData(form);
-      const email = formData.get("email");
-      const duration = formData.get("duration");
+      const email = document.getElementById("email").value;
+      const duration = document.getElementById("duration").value;
 
-      status.textContent = "⏳ Đang xử lý...";
+      setStatus("\u2728 Đang kiểm tra...", true);
 
-      try {
-        const res = await fetch("https://otp.redzwm.tech/api/start", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ email, duration })
-        });
+      const res = await fetch(API_BASE + "/api/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, duration })
+      });
 
-        const text = await res.text();
-        status.textContent = text;
+      const data = await res.json();
 
-        // Nếu Gmail, sẽ bị redirect → hiển thị dạng text
-        if (res.redirected) {
-          window.location.href = res.url;
-        }
-      } catch (err) {
-        status.textContent = "❌ Lỗi gửi yêu cầu: " + err.message;
+      if (data.oauth_url) {
+        setStatus("\u26a1️ Cần xác thực Gmail, đang chuyển...", true);
+        window.location.href = API_BASE + data.oauth_url; // redirect OAuth
+      } else if (data.status === "watching") {
+        setStatus("🔐 Đang theo dõi OTP...", true);
+      } else if (data.status === "unauthenticated") {
+        setStatus("❌ Chưa xác thực, vui lòng thực hiện OAuth", true);
+      } else {
+        setStatus("⚠️ Trạng thái: " + data.status, true);
       }
     });
+
+    function setStatus(msg, show) {
+      const el = document.getElementById("status");
+      el.innerText = msg;
+      el.style.display = show ? "block" : "none";
+    }
   </script>
 </body>
 </html>
